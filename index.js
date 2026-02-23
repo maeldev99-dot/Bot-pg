@@ -1,36 +1,37 @@
-// index.js
 const express = require("express");
 const axios = require("axios");
+const { Configuration, OpenAIApi } = require("openai");
 const app = express();
 
-// Middleware pour lire le JSON
 app.use(express.json());
 
-// 🔐 Variables d'environnement (à configurer sur Railway)
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // Exemple: monsecret123
-const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN; // Ton token page
+// 🔐 Variables
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Configuration OpenAI
+const configuration = new Configuration({ apiKey: OPENAI_API_KEY });
+const openai = new OpenAIApi(configuration);
 
 // ----------------------------
-// 1️⃣ Vérification du webhook
+// Vérification webhook
 // ----------------------------
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Webhook verification request :", req.query);
-
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
     console.log("✅ Webhook vérifié !");
     res.status(200).send(challenge);
   } else {
-    console.log("❌ Webhook non vérifié. Token incorrect !");
     res.sendStatus(403);
   }
 });
 
 // ----------------------------
-// 2️⃣ Réception des messages
+// Réception messages
 // ----------------------------
 app.post("/webhook", async (req, res) => {
   const body = req.body;
@@ -42,18 +43,17 @@ app.post("/webhook", async (req, res) => {
 
       console.log("Message reçu :", webhook_event);
 
-      // Si le message existe
       if (webhook_event.message && webhook_event.message.text) {
-        await sendMessage(sender_psid, `Tu as dit : ${webhook_event.message.text}`);
+        const userMessage = webhook_event.message.text;
+        const aiReply = await getAIReply(userMessage);
+        await sendMessage(sender_psid, aiReply);
       }
 
-      // Si un bouton ou postback est cliqué
       if (webhook_event.postback) {
         await sendMessage(sender_psid, `Postback reçu : ${webhook_event.postback.payload}`);
       }
     });
 
-    // Répondre immédiatement à Facebook
     res.status(200).send("EVENT_RECEIVED");
   } else {
     res.sendStatus(404);
@@ -61,7 +61,24 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ----------------------------
-// 3️⃣ Fonction pour envoyer un message
+// Fonction IA
+// ----------------------------
+async function getAIReply(message) {
+  try {
+    const response = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: message }],
+    });
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error("Erreur OpenAI :", error.response?.data || error.message);
+    return "Désolé, je n'ai pas pu répondre 😅";
+  }
+}
+
+// ----------------------------
+// Fonction envoyer message Messenger
 // ----------------------------
 async function sendMessage(psid, text) {
   try {
@@ -69,7 +86,7 @@ async function sendMessage(psid, text) {
       `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
       {
         recipient: { id: psid },
-        message: { text: text },
+        message: { text },
       }
     );
     console.log("✅ Message envoyé :", text);
@@ -79,7 +96,7 @@ async function sendMessage(psid, text) {
 }
 
 // ----------------------------
-// 4️⃣ Lancer le serveur
+// Lancer serveur
 // ----------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
