@@ -1,47 +1,29 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-
+const express = require("express");
 const app = express();
-app.use(bodyParser.json());
 
-const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+app.use(express.json());
+
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-app.get('/webhook', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    res.status(200).send(challenge);
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("Webhook vérifié !");
+    return res.status(200).send(challenge);
   } else {
-    res.sendStatus(403);
+    return res.sendStatus(403);
   }
 });
 
-app.post('/webhook', async (req, res) => {
-  const body = req.body;
-
-  if (body.object === 'page') {
-    const webhookEvent = body.entry[0].messaging[0];
-    const senderId = webhookEvent.sender.id;
-
-    if (webhookEvent.message && webhookEvent.message.text) {
-      await axios.post(
-        `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
-        {
-          recipient: { id: senderId },
-          message: { text: "Salut 👋 je suis ton bot Android !" }
-        }
-      );
-    }
-
-    res.status(200).send('EVENT_RECEIVED');
-  } else {
-    res.sendStatus(404);
-  }
+app.post("/webhook", (req, res) => {
+  console.log("Événement reçu :", req.body);
+  return res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT);
+app.listen(PORT, () => {
+  console.log("Serveur lancé sur port " + PORT);
+});
