@@ -1,6 +1,6 @@
 const express = require("express");
 const axios = require("axios");
-const OpenAI = require("openai"); // CORRECT pour OpenAI v4 + Node 18
+const OpenAI = require("openai"); // Correct pour OpenAI v4
 const app = express();
 
 app.use(express.json());
@@ -12,7 +12,7 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Instancier OpenAI correctement
+// Instancier OpenAI
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY
 });
@@ -65,7 +65,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ----------------------------
-// Fonction IA corrigée OpenAI v4
+// Fonction IA ChatGPT v4
 // ----------------------------
 async function getAIReply(message) {
   try {
@@ -73,7 +73,6 @@ async function getAIReply(message) {
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: message }]
     });
-
     return response.choices[0].message.content;
   } catch (error) {
     console.error("Erreur OpenAI :", error.response?.data || error.message);
@@ -102,5 +101,5 @@ async function sendMessage(psid, text) {
 // ----------------------------
 // Lancer serveur
 // ----------------------------
-const PORT = process.env.PORT || 3000; // 3000 seulement pour test local
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
