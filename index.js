@@ -1,18 +1,21 @@
 const express = require("express");
 const axios = require("axios");
-const { Configuration, OpenAIApi } = require("openai");
+const OpenAI = require("openai"); // CORRECT pour OpenAI v4 + Node 18
 const app = express();
 
 app.use(express.json());
 
+// ----------------------------
 // Variables d'environnement
+// ----------------------------
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Configuration OpenAI
-const configuration = new Configuration({ apiKey: OPENAI_API_KEY });
-const openai = new OpenAIApi(configuration);
+// Instancier OpenAI correctement
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY
+});
 
 // ----------------------------
 // Vérification du webhook
@@ -32,7 +35,7 @@ app.get("/webhook", (req, res) => {
 });
 
 // ----------------------------
-// Réception messages
+// Réception des messages
 // ----------------------------
 app.post("/webhook", async (req, res) => {
   const body = req.body;
@@ -44,14 +47,12 @@ app.post("/webhook", async (req, res) => {
 
       console.log("Message reçu :", webhook_event);
 
-      // Message texte
       if (webhook_event.message && webhook_event.message.text) {
         const userMessage = webhook_event.message.text;
         const aiReply = await getAIReply(userMessage);
         await sendMessage(sender_psid, aiReply);
       }
 
-      // Postback
       if (webhook_event.postback) {
         await sendMessage(sender_psid, `Postback reçu : ${webhook_event.postback.payload}`);
       }
@@ -64,15 +65,16 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ----------------------------
-// Fonction IA ChatGPT
+// Fonction IA corrigée OpenAI v4
 // ----------------------------
 async function getAIReply(message) {
   try {
-    const response = await openai.createChatCompletion({
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: message }],
+      messages: [{ role: "user", content: message }]
     });
-    return response.data.choices[0].message.content;
+
+    return response.choices[0].message.content;
   } catch (error) {
     console.error("Erreur OpenAI :", error.response?.data || error.message);
     return "Désolé, je n'ai pas pu répondre 😅";
@@ -80,7 +82,7 @@ async function getAIReply(message) {
 }
 
 // ----------------------------
-// Fonction envoyer message Messenger
+// Envoyer message Messenger
 // ----------------------------
 async function sendMessage(psid, text) {
   try {
@@ -88,7 +90,7 @@ async function sendMessage(psid, text) {
       `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
       {
         recipient: { id: psid },
-        message: { text },
+        message: { text }
       }
     );
     console.log("✅ Message envoyé :", text);
