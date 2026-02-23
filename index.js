@@ -102,5 +102,5 @@ async function sendMessage(psid, text) {
 // ----------------------------
 // Lancer serveur
 // ----------------------------
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // 3000 seulement pour test local
 app.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
