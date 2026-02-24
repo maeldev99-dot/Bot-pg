@@ -10,13 +10,13 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const HF_API_KEY = process.env.HF_API_KEY;
 
-// Vérification simple des variables
+// Vérification des variables
 if (!VERIFY_TOKEN || !PAGE_ACCESS_TOKEN || !HF_API_KEY) {
   console.error("❌ Une ou plusieurs variables d'environnement manquent !");
   process.exit(1);
 }
 
-// Webhook verification
+// Vérification du webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -44,11 +44,11 @@ app.post("/webhook", async (req, res) => {
         let reply = "Je réfléchis... 🤔";
 
         try {
-          // Nouvelle API Hugging Face Router
+          // Hugging Face Router avec modèle public
           const response = await axios.post(
             "https://router.huggingface.co/api/chat",
             {
-              model: "facebook/blenderbot-400M-distill",
+              model: "microsoft/DialoGPT-medium",
               inputs: userMessage
             },
             {
@@ -56,21 +56,20 @@ app.post("/webhook", async (req, res) => {
             }
           );
 
-          // Récupérer la réponse du bot
+          // Récupérer la réponse du modèle
           if (response.data && response.data.generated_text) {
             reply = response.data.generated_text;
           } else if (response.data && response.data[0]?.generated_text) {
-            // Parfois la réponse est dans un tableau
             reply = response.data[0].generated_text;
           } else {
             reply = "Je n'ai pas compris 😅";
           }
         } catch (error) {
           console.error("Erreur Hugging Face :", error.response?.data || error.message);
-          reply = "Erreur IA 😅";
+          reply = "Erreur IA DU CON 😅";
         }
 
-        // Envoyer la réponse au user via Messenger
+        // Envoyer la réponse à l'utilisateur via Messenger
         try {
           await axios.post(
             `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
